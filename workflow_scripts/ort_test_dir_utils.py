@@ -21,9 +21,9 @@ def _get_numpy_type(model_info, name):
             if type_name == 'tensor_type':
                 return onnx.mapping.TENSOR_TYPE_TO_NP_TYPE[i.type.tensor_type.elem_type]
             else:
-                raise ValueError("Type is not handled: {}".format(type_name))
+                raise ValueError(f"Type is not handled: {type_name}")
 
-    raise ValueError("{} was not found in the model info.".format(name))
+    raise ValueError(f"{name} was not found in the model info.")
 
 
 def _create_missing_input_data(model_inputs, name_input_map, symbolic_dim_values_map):
@@ -40,7 +40,10 @@ def _create_missing_input_data(model_inputs, name_input_map, symbolic_dim_values
 
         input_type = input.type.WhichOneof('value')
         if input_type != 'tensor_type':
-            raise ValueError('Unsupported model. Need to handle input type of {}'.format(input_type))
+            raise ValueError(
+                f'Unsupported model. Need to handle input type of {input_type}'
+            )
+
 
         shape = input.type.tensor_type.shape
         dims = []
@@ -50,7 +53,7 @@ def _create_missing_input_data(model_inputs, name_input_map, symbolic_dim_values
                 dims.append(dim.dim_value)
             elif dim_type == 'dim_param':
                 if dim.dim_param not in symbolic_dim_values_map:
-                    print("Warning: Value for symbolic dim {} was not provided.".format(dim.dim_param))
+                    print(f"Warning: Value for symbolic dim {dim.dim_param} was not provided.")
                     # If symbolic dim is not given, set it as 1
                     dims.append(1)
                 else:
@@ -95,7 +98,7 @@ def create_test_dir(model_path, root_path, test_name,
     # add to existing test data sets if present
     test_num = 0
     while True:
-        test_data_dir = os.path.join(test_dir, "test_data_set_" + str(test_num))
+        test_data_dir = os.path.join(test_dir, f"test_data_set_{str(test_num)}")
         if not os.path.exists(test_data_dir):
             os.mkdir(test_data_dir)
             break
@@ -198,21 +201,26 @@ def run_test_dir(model_or_dir):
         ort_models = glob.glob(os.path.join(model_dir, '*.ort'))
         models = onnx_models + ort_models
         if len(models) > 1:
-            raise ValueError("'Multiple .onnx and/or .ort files found in {}. '"
-                             "'Please provide specific .onnx or .ort file as input.".format(model_dir))
+            raise ValueError(
+                f"'Multiple .onnx and/or .ort files found in {model_dir}. ''Please provide specific .onnx or .ort file as input."
+            )
+
         elif len(models) == 0:
-            raise ValueError("'No .onnx or .ort files found in {}.".format(model_dir))
+            raise ValueError(f"'No .onnx or .ort files found in {model_dir}.")
 
         model_path = models[0]
     else:
         model_path = os.path.abspath(model_or_dir)
         model_dir = os.path.dirname(model_path)
 
-    print('Running tests in {} for {}'.format(model_dir, model_path))
+    print(f'Running tests in {model_dir} for {model_path}')
 
     test_dirs = [d for d in glob.glob(os.path.join(model_dir, 'test*')) if os.path.isdir(d)]
     if not test_dirs:
-        raise ValueError("No directories with name starting with 'test' were found in {}.".format(model_dir))
+        raise ValueError(
+            f"No directories with name starting with 'test' were found in {model_dir}."
+        )
+
 
     # Start from ORT 1.10, ORT requires explicitly setting the providers parameter if you want to use execution providers
     # other than the default CPU provider (as opposed to the previous behavior of providers getting set/registered by default
@@ -247,12 +255,11 @@ def run_test_dir(model_or_dir):
 
                 if expected.dtype.char in np.typecodes['AllFloat']:
                     if not np.isclose(expected, actual, rtol=1.e-3, atol=1.e-3).all():
-                        print('Mismatch for {}:\nExpected:{}\nGot:{}'.format(output_names[idx], expected, actual))
+                        print(f'Mismatch for {output_names[idx]}:\nExpected:{expected}\nGot:{actual}')
                         failed = True
-                else:
-                    if not np.equal(expected, actual).all():
-                        print('Mismatch for {}:\nExpected:{}\nGot:{}'.format(output_names[idx], expected, actual))
-                        failed = True
+                elif not np.equal(expected, actual).all():
+                    print(f'Mismatch for {output_names[idx]}:\nExpected:{expected}\nGot:{actual}')
+                    failed = True
         if failed:
             raise ValueError('FAILED due to output mismatch.')
         else:

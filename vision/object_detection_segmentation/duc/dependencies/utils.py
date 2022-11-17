@@ -21,7 +21,7 @@ import cityscapes_labels
 
 # save symbol
 def save_symbol(net, net_prefix):
-    net.save('%s-symbol.json' % net_prefix)
+    net.save(f'{net_prefix}-symbol.json')
 
 
 # save parameters
@@ -30,9 +30,11 @@ def save_parameter(net, net_prefix, data_shape):
     arg_params = executor.arg_dict
     aux_params = executor.aux_dict
 
-    save_dict = {('arg:%s' % k): v for k, v in arg_params.items()}
-    save_dict.update({('aux:%s' % k): v for k, v in aux_params.items()})
-    param_name = '%s.params' % net_prefix
+    save_dict = {f'arg:{k}': v for k, v in arg_params.items()} | {
+        f'aux:{k}': v for k, v in aux_params.items()
+    }
+
+    param_name = f'{net_prefix}.params'
     mx.ndarray.save(param_name, save_dict)
 
 
@@ -40,12 +42,19 @@ def save_parameter(net, net_prefix, data_shape):
 def save_log(prefix, output_dir):
     fmt = '%(asctime)s %(message)s'
     date_fmt = '%m-%d %H:%M:%S'
-    logging.basicConfig(level=logging.INFO,
-                        format=fmt,
-                        datefmt=date_fmt,
-                        filename=os.path.join(output_dir,
-                                              prefix + '_' + datetime.now().strftime('%Y_%m_%d_%H:%M:%S') + '.log'),
-                        filemode='w')
+    logging.basicConfig(
+        level=logging.INFO,
+        format=fmt,
+        datefmt=date_fmt,
+        filename=os.path.join(
+            output_dir,
+            f'{prefix}_'
+            + datetime.now().strftime('%Y_%m_%d_%H:%M:%S')
+            + '.log',
+        ),
+        filemode='w',
+    )
+
     console = logging.StreamHandler()
     console.setLevel(logging.INFO)
     formatter = logging.Formatter(fmt=fmt, datefmt=date_fmt)
@@ -59,8 +68,7 @@ def replace_city_labels(label_data):
     converted = np.ones(label_data.shape, dtype=np.float) * 255
     # id to trainId
     id2trainId = {label.id: label.trainId for label in labels}
-    for id in id2trainId:
-        trainId = id2trainId[id]
+    for id, trainId in id2trainId.items():
         converted[label_data == id] = trainId
     return converted
 
@@ -153,7 +161,15 @@ def get_single_image_duc(item, input_args):
     feat_height = int(math.ceil(float(crop_sz[0]) / stride))
     feat_width = int(math.ceil(float(crop_sz[1]) / stride))
 
-    img_label = img_label.reshape((feat_height, int(stride / cell_width), int(feat_width), int(stride / cell_width)))
+    img_label = img_label.reshape(
+        (
+            feat_height,
+            int(stride / cell_width),
+            feat_width,
+            int(stride / cell_width),
+        )
+    )
+
     img_label = np.transpose(img_label, (1, 3, 0, 2))
     img_label = img_label.reshape((-1, feat_height, feat_width))
     img_label = img_label.reshape(-1)
@@ -165,8 +181,7 @@ def get_palette():
     # get palette
     trainId2colors = {label.trainId: label.color for label in cityscapes_labels.labels}
     palette = [0] * 256 * 3
-    for trainId in trainId2colors:
-        colors = trainId2colors[trainId]
+    for trainId, colors in trainId2colors.items():
         if trainId == 255:
             colors = (0, 0, 0)
         for i in range(3):

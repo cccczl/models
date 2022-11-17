@@ -71,14 +71,22 @@ class SquadExample(object):
         return self.__repr__()
 
     def __repr__(self):
-        s = []
-        s.append("qas_id: %s" % (tokenization.printable_text(self.qas_id)))
-        s.append("question_text: %s" % (tokenization.printable_text(self.question_text)))
-        s.append("doc_tokens: [%s]" % (" ".join(self.doc_tokens)))
+        s = [f"qas_id: {tokenization.printable_text(self.qas_id)}"]
+        s.extend(
+            (
+                f"question_text: {tokenization.printable_text(self.question_text)}",
+                f'doc_tokens: [{" ".join(self.doc_tokens)}]',
+            )
+        )
+
         if self.start_position:
-            s.append("start_position: %d" % (self.start_position))
-        if self.start_position:
-            s.append("end_position: %d" % (self.end_position))
+            s.extend(
+                (
+                    "start_position: %d" % (self.start_position),
+                    "end_position: %d" % (self.end_position),
+                )
+            )
+
         return ", ".join(s)
 
 
@@ -128,11 +136,13 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length, doc_stride
     extra = []
     unique_id = 0
 
+    tok_start_position = None
+    tok_end_position = None
     for (example_index, example) in enumerate(examples):
         query_tokens = tokenizer.tokenize(example.question_text)
 
         if len(query_tokens) > max_query_length:
-            query_tokens = query_tokens[0:max_query_length]
+            query_tokens = query_tokens[:max_query_length]
 
         tok_to_orig_index = []
         orig_to_tok_index = []
@@ -144,8 +154,6 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length, doc_stride
                 tok_to_orig_index.append(i)
                 all_doc_tokens.append(sub_token)
 
-        tok_start_position = None
-        tok_end_position = None
         # The -3 accounts for [CLS], [SEP] and [SEP]
         max_tokens_for_doc = max_seq_length - len(query_tokens) - 3
 
@@ -165,12 +173,10 @@ def convert_examples_to_features(examples, tokenizer, max_seq_length, doc_stride
             start_offset += min(length, doc_stride)
 
         for (doc_span_index, doc_span) in enumerate(doc_spans):
-            tokens = []
             token_to_orig_map = {}
             token_is_max_context = {}
-            segment_ids = []
-            tokens.append("[CLS]")
-            segment_ids.append(0)
+            tokens = ["[CLS]"]
+            segment_ids = [0]
             for token in query_tokens:
                 tokens.append(token)
                 segment_ids.append(0)
@@ -217,9 +223,7 @@ def read_squad_examples(input_file):
         input_data = json.load(f)["data"]
 
     def is_whitespace(c):
-        if c == " " or c == "\t" or c == "\r" or c == "\n" or ord(c) == 0x202F:
-            return True
-        return False
+        return c == " " or c == "\t" or c == "\r" or c == "\n" or ord(c) == 0x202F
 
     examples = []
     for idx, entry in enumerate(input_data):
@@ -264,10 +268,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
     for feature in all_features:
         example_index_to_features[feature.example_index].append(feature)
 
-    unique_id_to_result = {}
-    for result in all_results:
-        unique_id_to_result[result.unique_id] = result
-
+    unique_id_to_result = {result.unique_id: result for result in all_results}
     _PrelimPrediction = collections.namedtuple(  # pylint: disable=invalid-name
         "PrelimPrediction",
         ["feature_index", "start_index", "end_index", "start_logit", "end_logit"])
@@ -278,7 +279,7 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
         features = example_index_to_features[example_index]
         prelim_predictions = []
         for (feature_index, feature) in enumerate(features):
-            if not feature.unique_id in unique_id_to_result:
+            if feature.unique_id not in unique_id_to_result:
                 print("feature not in unique_Id", feature.unique_id)
                 continue
             result = unique_id_to_result[feature.unique_id]
@@ -360,12 +361,9 @@ def write_predictions(all_examples, all_features, all_results, n_best_size,
             nbest.append(
                 _NbestPrediction(text="empty", start_logit=0.0, end_logit=0.0))
 
-        assert len(nbest) >= 1
+        assert nbest
 
-        total_scores = []
-        for entry in nbest:
-            total_scores.append(entry.start_logit + entry.end_logit)
-
+        total_scores = [entry.start_logit + entry.end_logit for entry in nbest]
         probs = _compute_softmax(total_scores)
 
         nbest_json = []
@@ -501,10 +499,7 @@ def _compute_softmax(scores):
         exp_scores.append(x)
         total_sum += x
 
-    probs = []
-    for score in exp_scores:
-        probs.append(score / total_sum)
-    return probs
+    return [score / total_sum for score in exp_scores]
 
 
 def main():
@@ -558,14 +553,17 @@ def main():
                 "segment_ids:0": segment_ids[idx:idx + bs]}
         result = sess.run(["unstack:0", "unstack:1"], data)
         in_batch = result[0].shape[1]
-        for i in range(0, in_batch):
+        for i in range(in_batch):
             unique_id = len(all_results)
             all_results.append(RawResult(unique_id=unique_id, start_logits=result[0][0][i], end_logits=result[1][0][i]))
             if unique_id > 0 and unique_id % 100 == 0:
-                print("at {} {}sec per item".format(unique_id, (timer() - start) / unique_id))
+                print(f"at {unique_id} {(timer() - start) / unique_id}sec per item")
     end = timer()
 
-    print("total time: {}sec, {}sec per item".format(end - start, (end - start) / len(all_results)))
+    print(
+        f"total time: {end - start}sec, {(end - start) / len(all_results)}sec per item"
+    )
+
 
     if args.output_dir:
         output_prediction_file = os.path.join(args.output_dir, "predictions.json")
@@ -575,7 +573,7 @@ def main():
                           True, output_prediction_file, output_nbest_file)
     if args.profile:
         trace_file = sess.end_profiling()
-        print("trace file written to: {}".format(trace_file))
+        print(f"trace file written to: {trace_file}")
     return 0
 
 

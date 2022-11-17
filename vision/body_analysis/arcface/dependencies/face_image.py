@@ -23,7 +23,7 @@ Functions for loading different datasets.
 get_dataset_*dataset-name*(input_dir) loads *dataset-name* dataset from input_dir
 '''
 def get_dataset_webface(input_dir):
-  clean_list_file = input_dir+"_clean_list.txt"
+  clean_list_file = f"{input_dir}_clean_list.txt"
   ret = []
   for line in open(clean_list_file, 'r'):
     vec = line.strip().split()
@@ -36,7 +36,7 @@ def get_dataset_webface(input_dir):
   return ret
 
 def get_dataset_celeb(input_dir):
-  clean_list_file = input_dir+"_clean_list.txt"
+  clean_list_file = f"{input_dir}_clean_list.txt"
   ret = []
   dir2label = {}
   for line in open(clean_list_file, 'r'):
@@ -60,7 +60,7 @@ def get_dataset_celeb(input_dir):
   return ret
 
 def _get_dataset_celeb(input_dir):
-  list_file = input_dir+"_original_list.txt"
+  list_file = f"{input_dir}_original_list.txt"
   ret = []
   for line in open(list_file, 'r'):
     vec = line.strip().split()
@@ -75,9 +75,7 @@ def _get_dataset_celeb(input_dir):
 def get_dataset_facescrub(input_dir):
   ret = []
   label = 0
-  person_names = []
-  for person_name in os.listdir(input_dir):
-    person_names.append(person_name)
+  person_names = list(os.listdir(input_dir))
   person_names = sorted(person_names)
   for person_name in person_names:
     subdir = os.path.join(input_dir, person_name)
@@ -109,7 +107,7 @@ def get_dataset_megaface(input_dir):
           fimage.id = os.path.join(prefixdir, subdir, img)
           fimage.classname = str(label)
           fimage.image_path = os.path.join(_subdir, img)
-          json_file = fimage.image_path+".json"
+          json_file = f"{fimage.image_path}.json"
           data = None
           fimage.bbox = None
           fimage.landmark = None
@@ -153,7 +151,7 @@ def get_dataset_fgnet(input_dir):
         fimage.id = os.path.join(_subdir, img)
         fimage.classname = str(label)
         fimage.image_path = os.path.join(_subdir, img)
-        json_file = fimage.image_path+".json"
+        json_file = f"{fimage.image_path}.json"
         data = None
         fimage.bbox = None
         fimage.landmark = None
@@ -186,9 +184,7 @@ def get_dataset_fgnet(input_dir):
 def get_dataset_ytf(input_dir):
   ret = []
   label = 0
-  person_names = []
-  for person_name in os.listdir(input_dir):
-    person_names.append(person_name)
+  person_names = list(os.listdir(input_dir))
   person_names = sorted(person_names)
   for person_name in person_names:
     _subdir = os.path.join(input_dir, person_name)
@@ -227,9 +223,7 @@ def get_dataset_clfw(input_dir):
 def get_dataset_common(input_dir, min_images = 1):
   ret = []
   label = 0
-  person_names = []
-  for person_name in os.listdir(input_dir):
-    person_names.append(person_name)
+  person_names = list(os.listdir(input_dir))
   person_names = sorted(person_names)
   for person_name in person_names:
     _subdir = os.path.join(input_dir, person_name)
@@ -251,7 +245,7 @@ def get_dataset_common(input_dir, min_images = 1):
 
 # Driver function for loading datasets, pass name of dataset to load in name argument
 def get_dataset(name, input_dir):
-  if name=='webface' or name=='lfw' or name=='vgg':
+  if name in ['webface', 'lfw', 'vgg']:
     return get_dataset_common(input_dir)
   if name=='celeb':
     return get_dataset_celeb(input_dir)
@@ -263,6 +257,4 @@ def get_dataset(name, input_dir):
     return get_dataset_fgnet(input_dir)
   if name=='ytf':
     return get_dataset_ytf(input_dir)
-  if name=='clfw':
-    return get_dataset_clfw(input_dir)
-  return None
+  return get_dataset_clfw(input_dir) if name=='clfw' else None

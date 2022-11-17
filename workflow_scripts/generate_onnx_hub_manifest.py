@@ -54,7 +54,7 @@ for top_level_table in top_level_tables:
                 markdown_files.add(join(
                     "..", row["Model Class"].contents[0].contents[0].attrs['href'], "README.md"))
             except AttributeError:
-                print("{} has no link to implementation".format(row["Model Class"].contents[0]))
+                print(f'{row["Model Class"].contents[0]} has no link to implementation')
 # Sort for reproducibility
 markdown_files = sorted(list(markdown_files))
 
@@ -67,7 +67,10 @@ for markdown_file in markdown_files:
                 parsed["source_file"] = markdown_file
                 all_tables.append(parsed)
             else:
-                print("Unrecognized table columns in file {}: {}".format(markdown_file, parsed.columns.values))
+                print(
+                    f"Unrecognized table columns in file {markdown_file}: {parsed.columns.values}"
+                )
+
 
 df = pd.concat(all_tables, axis=0)
 normalize_name = {
@@ -83,10 +86,7 @@ def prep_name(col):
         col = normalize_name[col]
     col = col.rstrip()
     prepped_col = col.replace(" ", "_").lower()
-    if prepped_col in top_level_fields:
-        return prepped_col
-    else:
-        return col
+    return prepped_col if prepped_col in top_level_fields else col
 
 
 renamed = df.rename(columns={col: prep_name(col) for col in df.columns.values})
@@ -150,11 +150,9 @@ def get_model_ports(source_file, metadata, model_name):
 
     except NotImplemented:
         print(
-            'Failed to load model from {}. Run `git lfs pull --include="{}" --exclude=""` '
-            'to download the model payload first.'.format(
-                model_path, source_file
-            )
+            f'Failed to load model from {model_path}. Run `git lfs pull --include="{source_file}" --exclude=""` to download the model payload first.'
         )
+
         return None, None
 
 
@@ -214,12 +212,15 @@ for i, row in renamed.iterrows():
             for k, v in get_file_info(row, "model_with_data_path").items():
                 metadata[k] = v
         except (AttributeError, FileNotFoundError) as e:
-            print("no model_with_data in file {}".format(row["source_file"]))
+            print(f'no model_with_data in file {row["source_file"]}')
 
         try:
             opset = int(row["opset_version"].contents[0])
         except ValueError:
-            print("malformed opset {} in {}".format(row["opset_version"].contents[0], row["source_file"]))
+            print(
+                f'malformed opset {row["opset_version"].contents[0]} in {row["source_file"]}'
+            )
+
             continue
 
         output.append(
@@ -232,8 +233,8 @@ for i, row in renamed.iterrows():
             }
         )
     else:
-        print("Missing model in {}".format(row["source_file"]))
+        print(f'Missing model in {row["source_file"]}')
 
 with open(join("..", "ONNX_HUB_MANIFEST.json"), "w+") as f:
-    print("Found {} models".format(len(output)))
+    print(f"Found {len(output)} models")
     json.dump(output, f, indent=4)

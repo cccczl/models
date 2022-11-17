@@ -25,23 +25,22 @@ def parse_args():
                         help="The directory to store extracted images")
     parser.add_argument('--checksum', action='store_true',
                         help="If check integrity before extracting.")
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 def check_file(filename, checksum, sha1):
     if not os.path.exists(filename):
-        raise ValueError('File not found: '+filename)
+        raise ValueError(f'File not found: {filename}')
     if checksum and not check_sha1(filename, sha1):
-        raise ValueError('Corrupted file: '+filename)
+        raise ValueError(f'Corrupted file: {filename}')
 
 def extract_train(tar_fname, target_dir):
     os.makedirs(target_dir)
     with tarfile.open(tar_fname) as tar:
-        print("Extracting "+tar_fname+"...")
+        print(f"Extracting {tar_fname}...")
         # extract each class one-by-one
         pbar = tqdm(total=len(tar.getnames()))
         for class_tar in tar:
-            pbar.set_description('Extract '+class_tar.name)
+            pbar.set_description(f'Extract {class_tar.name}')
             tar.extract(class_tar, target_dir)
             class_fname = os.path.join(target_dir, class_tar.name)
             class_dir = os.path.splitext(class_fname)[0]
@@ -54,7 +53,7 @@ def extract_train(tar_fname, target_dir):
 
 def extract_val(tar_fname, target_dir):
     os.makedirs(target_dir)
-    print('Extracting ' + tar_fname)
+    print(f'Extracting {tar_fname}')
     with tarfile.open(tar_fname) as tar:
         tar.extractall(target_dir)
     # move images to proper subfolders
@@ -71,7 +70,7 @@ def main():
 
     target_dir = os.path.expanduser(args.target_dir)
     if os.path.exists(target_dir):
-        raise ValueError('Target dir ['+target_dir+'] exists. Remove it first')
+        raise ValueError(f'Target dir [{target_dir}] exists. Remove it first')
 
     tar_dir = os.path.expanduser(args.download_dir)
     train_tar_fname = os.path.join(tar_dir, _TRAIN_TAR)

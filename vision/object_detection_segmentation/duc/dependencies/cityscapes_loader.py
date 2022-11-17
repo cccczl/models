@@ -53,9 +53,7 @@ class CityLoader(mx.io.DataIter):
         with open(data_list, 'r') as f:
             for line in f:
                 frags = line.strip().split('\t')
-                item = list()
-                item.append(frags[1])       # item[0] is image path
-                item.append(frags[2])       # item[1] is label path
+                item = [frags[1], frags[2]]
                 if len(frags) > 3:
                     item.append(frags[3:])  # item[2] is parameters for cropping
                 data.append(item)
@@ -64,7 +62,7 @@ class CityLoader(mx.io.DataIter):
     def _insert_queue(self):
         for item in self.data:
             self.data_queue.put(item)
-        [self.data_queue.put(self.stop_word) for pid in range(self.n_thread)]
+        [self.data_queue.put(self.stop_word) for _ in range(self.n_thread)]
 
     def _thread_start(self):
         self.stop_flag = False
@@ -113,26 +111,27 @@ class CityLoader(mx.io.DataIter):
         return self.batch_size
 
     def shutdown(self):
-        if self.multi_thread:
-            # clean queue
-            while True:
-                try:
-                    self.result_queue.get(timeout=1)
-                except Queue.Empty:
-                    break
-            while True:
-                try:
-                    self.data_queue.get(timeout=1)
-                except Queue.Empty:
-                    break
-            # stop worker
-            self.stop_flag = True
-            if self.worker_proc:
-                for i, worker in enumerate(self.worker_proc):
-                    worker.join(timeout=1)
-                    if worker.is_alive():
-                        logging.error('worker {} is join fail'.format(i))
-                        worker.terminate()
+        if not self.multi_thread:
+            return
+        # clean queue
+        while True:
+            try:
+                self.result_queue.get(timeout=1)
+            except Queue.Empty:
+                break
+        while True:
+            try:
+                self.data_queue.get(timeout=1)
+            except Queue.Empty:
+                break
+        # stop worker
+        self.stop_flag = True
+        if self.worker_proc:
+            for i, worker in enumerate(self.worker_proc):
+                worker.join(timeout=1)
+                if worker.is_alive():
+                    logging.error(f'worker {i} is join fail')
+                    worker.terminate()
 
     def shuffle(self):
         random.shuffle(self.data)
@@ -149,17 +148,17 @@ class CityLoader(mx.io.DataIter):
             return False
         xs = [np.zeros(ds) for ds in self.data_shape]
         ys = [np.zeros(ls) for ls in self.label_shape]
-        cnt = 0
-        for i in range(self.current, self.current + batch_size):
-            if self.multi_thread:
-                image, label = self.result_queue.get()
-            else:
-                image, label = CityLoader._get_single(self.data[i], self.input_args)
+        for cnt, i in enumerate(range(self.current, self.current + batch_size)):
+            image, label = (
+                self.result_queue.get()
+                if self.multi_thread
+                else CityLoader._get_single(self.data[i], self.input_args)
+            )
+
             for j in range(len(image)):
                 xs[j][cnt, :, :, :] = image[j]
             for j in range(len(label)):
                 ys[j][cnt, :] = label[j]
-            cnt += 1
         xs = [mx.ndarray.array(x) for x in xs]
         ys = [mx.ndarray.array(y) for y in ys]
         self.current_batch = mx.io.DataBatch(data=xs, label=ys, pad=0, index=None)

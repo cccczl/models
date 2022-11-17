@@ -12,5 +12,4 @@ def postprocess(scores):
     '''
     prob = mx.ndarray.softmax(scores).asnumpy()
     prob = np.squeeze(prob)
-    a = np.argsort(prob)[::-1]
-    return a
+    return np.argsort(prob)[::-1]

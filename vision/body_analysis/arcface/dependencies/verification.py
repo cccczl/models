@@ -122,17 +122,17 @@ def calculate_accuracy(threshold, dist, actual_issame):
     return tpr, fpr, acc
 
 def evaluate(embeddings, actual_issame, nrof_folds=10, pca = 0):
-    '''
+  '''
     Splits embeddings into test pairs and computes accuracies using calculate_roc()
     '''
-    # Calculate evaluation metrics
-    thresholds = np.arange(0, 4, 0.01)
-    embeddings1 = embeddings[0::2]
-    embeddings2 = embeddings[1::2]
-    tpr, fpr, accuracy = calculate_roc(thresholds, embeddings1, embeddings2,
-        np.asarray(actual_issame), nrof_folds=nrof_folds, pca = pca)
-    thresholds = np.arange(0, 4, 0.001)
-    return tpr, fpr, accuracy
+  # Calculate evaluation metrics
+  thresholds = np.arange(0, 4, 0.01)
+  embeddings1 = embeddings[::2]
+  embeddings2 = embeddings[1::2]
+  tpr, fpr, accuracy = calculate_roc(thresholds, embeddings1, embeddings2,
+      np.asarray(actual_issame), nrof_folds=nrof_folds, pca = pca)
+  thresholds = np.arange(0, 4, 0.001)
+  return tpr, fpr, accuracy
 
 def load_bin(path, image_size):
   '''
@@ -140,7 +140,7 @@ def load_bin(path, image_size):
   '''
   bins, issame_list = pickle.load(open(path, 'rb'))
   data_list = []
-  for flip in [0,1]:
+  for _ in [0,1]:
     data = nd.empty((len(issame_list)*2, 3, image_size[0], image_size[1]))
     data_list.append(data)
   for i in range(len(issame_list)*2):

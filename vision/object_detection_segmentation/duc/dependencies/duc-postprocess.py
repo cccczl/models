@@ -10,8 +10,7 @@ def get_palette():
     trainId2colors = {label.trainId: label.color for label in cityscapes_labels.labels}
     # prepare and return palette
     palette = [0] * 256 * 3
-    for trainId in trainId2colors:
-        colors = trainId2colors[trainId]
+    for trainId, colors in trainId2colors.items():
         if trainId == 255:
             colors = (0, 0, 0)
         for i in range(3):
@@ -39,11 +38,14 @@ def postprocess(labels,img_shape,result_shape):
     # re-arrange output
     test_width = int((int(img_width) / ds_rate) * ds_rate)
     test_height = int((int(img_height) / ds_rate) * ds_rate)
-    feat_width = int(test_width / ds_rate)
-    feat_height = int(test_height / ds_rate)
+    feat_width = test_width // ds_rate
+    feat_height = test_height // ds_rate
     labels = labels.reshape((label_num, 4, 4, feat_height, feat_width))
     labels = np.transpose(labels, (0, 3, 1, 4, 2))
-    labels = labels.reshape((label_num, int(test_height / cell_width), int(test_width / cell_width)))
+    labels = labels.reshape(
+        (label_num, test_height // cell_width, test_width // cell_width)
+    )
+
 
     labels = labels[:, :int(img_height / cell_width),:int(img_width / cell_width)]
     labels = np.transpose(labels, [1, 2, 0])

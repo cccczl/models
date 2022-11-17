@@ -3,13 +3,10 @@
 import mxnet as mx
 
 def Conv(**kwargs):
-    body = mx.sym.Convolution(**kwargs)
-    return body
+    return mx.sym.Convolution(**kwargs)
 
 def Act(data, act_type, name):
-    #ignore param act_type, set it in this function
-    body = mx.sym.LeakyReLU(data = data, act_type='prelu', name = name)
-    return body
+    return mx.sym.LeakyReLU(data = data, act_type='prelu', name = name)
 
 
 def get_fc1(last_conv, num_classes, fc_type):
@@ -85,21 +82,75 @@ def residual_unit_v3(data, num_filter, stride, dim_match, name, **kwargs):
     bn_mom = kwargs.get('bn_mom', 0.9)
     workspace = kwargs.get('workspace', 256)
     memonger = kwargs.get('memonger', False)
-    bn1 = mx.sym.BatchNorm(data=data, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn1')
-    conv1 = Conv(data=bn1, num_filter=num_filter, kernel=(3,3), stride=(1,1), pad=(1,1),
-                                  no_bias=True, workspace=workspace, name=name + '_conv1')
-    bn2 = mx.sym.BatchNorm(data=conv1, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn2')
-    act1 = Act(data=bn2, act_type='relu', name=name + '_relu1')
-    conv2 = Conv(data=act1, num_filter=num_filter, kernel=(3,3), stride=stride, pad=(1,1),
-                                  no_bias=True, workspace=workspace, name=name + '_conv2')
-    bn3 = mx.sym.BatchNorm(data=conv2, fix_gamma=False, eps=2e-5, momentum=bn_mom, name=name + '_bn3')
+    bn1 = mx.sym.BatchNorm(
+        data=data,
+        fix_gamma=False,
+        eps=2e-5,
+        momentum=bn_mom,
+        name=f'{name}_bn1',
+    )
+
+    conv1 = Conv(
+        data=bn1,
+        num_filter=num_filter,
+        kernel=(3, 3),
+        stride=(1, 1),
+        pad=(1, 1),
+        no_bias=True,
+        workspace=workspace,
+        name=f'{name}_conv1',
+    )
+
+    bn2 = mx.sym.BatchNorm(
+        data=conv1,
+        fix_gamma=False,
+        eps=2e-5,
+        momentum=bn_mom,
+        name=f'{name}_bn2',
+    )
+
+    act1 = Act(data=bn2, act_type='relu', name=f'{name}_relu1')
+    conv2 = Conv(
+        data=act1,
+        num_filter=num_filter,
+        kernel=(3, 3),
+        stride=stride,
+        pad=(1, 1),
+        no_bias=True,
+        workspace=workspace,
+        name=f'{name}_conv2',
+    )
+
+    bn3 = mx.sym.BatchNorm(
+        data=conv2,
+        fix_gamma=False,
+        eps=2e-5,
+        momentum=bn_mom,
+        name=f'{name}_bn3',
+    )
+
 
     if dim_match:
         shortcut = data
     else:
-        conv1sc = Conv(data=data, num_filter=num_filter, kernel=(1,1), stride=stride, no_bias=True,
-                                        workspace=workspace, name=name+'_conv1sc')
-        shortcut = mx.sym.BatchNorm(data=conv1sc, fix_gamma=False, momentum=bn_mom, eps=2e-5, name=name + '_sc')
+        conv1sc = Conv(
+            data=data,
+            num_filter=num_filter,
+            kernel=(1, 1),
+            stride=stride,
+            no_bias=True,
+            workspace=workspace,
+            name=f'{name}_conv1sc',
+        )
+
+        shortcut = mx.sym.BatchNorm(
+            data=conv1sc,
+            fix_gamma=False,
+            momentum=bn_mom,
+            eps=2e-5,
+            name=f'{name}_sc',
+        )
+
     if memonger:
         shortcut._set_attr(mirror_stage='True')
     return bn3 + shortcut

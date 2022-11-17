@@ -22,9 +22,7 @@ def parse_lst_line(line):
       bbox[i-3] = int(vec[i])
     landmark = None
     if len(vec)>7:
-      _l = []
-      for i in range(7,17):
-        _l.append(float(vec[i]))
+      _l = [float(vec[i]) for i in range(7,17)]
       landmark = np.array(_l).reshape( (2,5) ).T
   return image_path, label, bbox, landmark, aligned
 
@@ -97,12 +95,10 @@ def preprocess(img, bbox=None, landmark=None, **kwargs):
     bb[2] = np.minimum(det[2]+margin/2, img.shape[1])
     bb[3] = np.minimum(det[3]+margin/2, img.shape[0])
     ret = img[bb[1]:bb[3],bb[0]:bb[2],:]
-    if len(image_size)>0:
+    if image_size:
       ret = cv2.resize(ret, (image_size[1], image_size[0]))
     return ret
   else: #do align using landmark
     assert len(image_size)==2
 
-    warped = cv2.warpAffine(img,M,(image_size[1],image_size[0]), borderValue = 0.0)
-
-    return warped
+    return cv2.warpAffine(img,M,(image_size[1],image_size[0]), borderValue = 0.0)

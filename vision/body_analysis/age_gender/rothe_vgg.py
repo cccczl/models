@@ -27,13 +27,11 @@ def scale(box):
     dx = int((maximum - width)/2)
     dy = int((maximum - height)/2)
 
-    bboxes = [box[0] - dx, box[1] - dy, box[2] + dx, box[3] + dy]
-    return bboxes
+    return [box[0] - dx, box[1] - dy, box[2] + dx, box[3] + dy]
 
 # crop image
 def cropImage(image, box):
-    num = image[box[1]:box[3], box[0]:box[2]]
-    return num
+    return image[box[1]:box[3], box[0]:box[2]]
 
 # face detection method
 def faceDetector(orig_image, threshold = 0.7):
@@ -73,8 +71,7 @@ def genderClassifier(orig_image):
 
     input_name = gender_classifier.get_inputs()[0].name
     genders = gender_classifier.run(None, {input_name: image})
-    gender = genderList[genders[0].argmax()]
-    return gender
+    return genderList[genders[0].argmax()]
 # ------------------------------------------------------------------------------------------------------------------------------------------------
 # Face age classification using VGG-16 onnx model
 age_classifier_onnx = "models/vgg_ilsvrc_16_age_imdb_wiki.onnx"
@@ -98,8 +95,7 @@ def ageClassifier(orig_image):
 
     input_name = age_classifier.get_inputs()[0].name
     ages = age_classifier.run(None, {input_name: image})
-    age = round(sum(ages[0][0] * list(range(0, 101))), 1)
-    return age
+    return round(sum(ages[0][0] * list(range(101))), 1)
 
 # ------------------------------------------------------------------------------------------------------------------------------------------------
 # Main void
@@ -108,7 +104,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument("-i", "--image", type=str, required=False, help="input image")
 args=parser.parse_args()
 
-img_path = args.image if args.image else "dependencies/bruce.jpg"
+img_path = args.image or "dependencies/bruce.jpg"
 color = (255, 128, 0)
 
 orig_image = cv2.imread(img_path)

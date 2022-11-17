@@ -55,7 +55,7 @@ class MtcnnDetector(object):
         models = [ os.path.join(model_folder, f) for f in models]
 
         self.PNets = []
-        for i in range(num_worker):
+        for _ in range(num_worker):
             workner_net = mx.model.FeedForward.load(models[0], 1, ctx=ctx)
             self.PNets.append(workner_net)
 
@@ -352,13 +352,13 @@ class MtcnnDetector(object):
             total_boxes = []
             for batch in sliced_index:
                 local_boxes = map( detect_first_stage_warpper, \
-                        zip(repeat(img), self.PNets[:len(batch)], [scales[i] for i in batch], repeat(self.threshold[0])) )
+                            zip(repeat(img), self.PNets[:len(batch)], [scales[i] for i in batch], repeat(self.threshold[0])) )
                 total_boxes.extend(local_boxes)
 
             # remove the Nones
             total_boxes = [ i for i in total_boxes if i is not None]
 
-            if len(total_boxes) == 0:
+            if not total_boxes:
                 return None
 
             total_boxes = np.vstack(total_boxes)
@@ -521,10 +521,8 @@ class MtcnnDetector(object):
         assert len(pts_list) > 0
         colMat = []
         for i in range(len(pts_list)):
-            colMat.append(pts_list[i][0])
-            colMat.append(pts_list[i][1])
-        colMat = np.matrix(colMat).transpose()
-        return colMat
+            colMat.extend((pts_list[i][0], pts_list[i][1]))
+        return np.matrix(colMat).transpose()
 
     def find_tfrom_between_shapes(self, from_shape, to_shape):
         """
@@ -571,10 +569,7 @@ class MtcnnDetector(object):
             else:
                 s[0, 0] = -1
         r = u * s * vt
-        c = 1.0
-        if sigma_from != 0:
-            c = 1.0 / sigma_from * np.trace(np.diag(d) * s)
-
+        c = 1.0 / sigma_from * np.trace(np.diag(d) * s) if sigma_from != 0 else 1.0
         tran_b = mean_to.transpose() - c * r * mean_from.transpose()
         tran_m = c * r
 
@@ -596,20 +591,15 @@ class MtcnnDetector(object):
                 cropped and aligned faces
         """
         crop_imgs = []
+        # average positions of face points
+        mean_face_shape_x = [0.224152, 0.75610125, 0.490127, 0.254149, 0.726104]
+        mean_face_shape_y = [0.2119465, 0.2119465, 0.628106, 0.780233, 0.780233]
+
         for p in points:
             shape  =[]
             for k in range(len(p)/2):
-                shape.append(p[k])
-                shape.append(p[k+5])
-
-            if padding > 0:
-                padding = padding
-            else:
-                padding = 0
-            # average positions of face points
-            mean_face_shape_x = [0.224152, 0.75610125, 0.490127, 0.254149, 0.726104]
-            mean_face_shape_y = [0.2119465, 0.2119465, 0.628106, 0.780233, 0.780233]
-
+                shape.extend((p[k], p[k+5]))
+            padding = max(padding, 0)
             from_points = []
             to_points = []
 
